@@ -21,8 +21,8 @@ def main():
     parser = argparse.ArgumentParser(description='Create new ESP32-P4 project from template')
     parser.add_argument('--name', '-n', required=True, help='Project name (directory + IDF project name)')
     parser.add_argument('--workspace', '-w', 
-                        default=os.path.expanduser('~/.openclaw/workspace/projects/esp32-p4-projects'), 
-                        help='Parent directory for projects (default: ~/.openclaw/workspace/projects/esp32-p4-projects)')
+                        default=os.path.join(os.environ.get('OPENCLAW_WORKSPACE_DIR', os.path.expanduser('~/.openclaw/workspace')), 'projects', 'esp32-p4-projects'), 
+                        help='Parent directory for projects (default: $OPENCLAW_WORKSPACE_DIR/projects/esp32-p4-projects)')
     parser.add_argument('--keep-name', action='store_true', 
                         help='Keep HelloWorld as project name (directory only)')
     args = parser.parse_args()
