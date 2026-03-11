@@ -30,14 +30,16 @@ def main():
     # Sanitize project name for filesystem and CMake
     project_name = args.name.replace(' ', '-').replace('_', '-')
     
-    # Resolve workspace path - if relative to OpenClaw workspace
+    # Resolve workspace path
     workspace_arg = Path(args.workspace)
     if not workspace_arg.is_absolute():
-        # Check if it's relative to workspace root (e.g., ./projects/...)
+        # Check if it's explicitly relative to CWD (./) vs relative path without ./
         if str(workspace_arg).startswith('./'):
-            workspace = OPENCLAW_WORKSPACE / str(workspace_arg)[2:]
+            # Strip ./ and resolve relative to current working directory
+            workspace = Path.cwd() / str(workspace_arg)[2:]
         else:
-            workspace = OPENCLAW_WORKSPACE / workspace_arg
+            # Relative path without ./ - resolve relative to CWD
+            workspace = Path.cwd() / workspace_arg
     else:
         workspace = workspace_arg.expanduser().resolve()
     

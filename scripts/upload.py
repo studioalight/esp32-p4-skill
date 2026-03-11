@@ -16,13 +16,15 @@ BRIDGE_URL = "https://esp32-bridge.tailbdd5a.ts.net:5679"
 OPENCLAW_WORKSPACE = Path(os.environ.get('OPENCLAW_WORKSPACE', os.path.expanduser('~/.openclaw/workspace')))
 
 def resolve_project_path(path_str):
-    """Resolve project path - handle relative to workspace"""
+    """Resolve project path - handle relative paths"""
     path = Path(path_str)
     if not path.is_absolute():
         if str(path).startswith('./'):
-            return OPENCLAW_WORKSPACE / str(path)[2:]
+            # ./projects/... means relative to current directory
+            return Path.cwd() / str(path)[2:]
         else:
-            return OPENCLAW_WORKSPACE / path
+            # Relative without ./ - also relative to current directory
+            return Path.cwd() / path
     return path.expanduser().resolve()
 
 def upload_file(filepath, dest_name=None):
