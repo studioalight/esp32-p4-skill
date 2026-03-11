@@ -35,14 +35,15 @@ FLASH_ADDRESSES = {
     'app': '0x10000'
 }
 
-async def flash_file(ws, filename, address, progress=True):
+async def flash_file(ws, filename, address, baud=921600, progress=True):
     """Flash single file"""
     print(f"\nFlashing {filename} at {address}...")
     
     await ws.send(json.dumps({
         'action': 'flash',
         'file': filename,
-        'addr': address
+        'addr': address,
+        'baud': baud
     }))
     
     while True:
@@ -68,7 +69,7 @@ async def flash_file(ws, filename, address, progress=True):
             print("  ✗ Timeout", file=sys.stderr)
             return False
 
-async def flash_files(files_to_flash, reset_after=True):
+async def flash_files(files_to_flash, baud=921600, reset_after=True):
     """Flash multiple files"""
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -76,6 +77,7 @@ async def flash_files(files_to_flash, reset_after=True):
     
     async with websockets.connect(WSS_URI, ssl=ssl_context, ping_interval=None) as ws:
         print(f"Connected to bridge\n")
+        print(f"Using baud rate: {baud}")
         
         # Enter bootloader before first flash
         await ws.send(json.dumps({'action': 'bootloader'}))
@@ -83,7 +85,7 @@ async def flash_files(files_to_flash, reset_after=True):
         
         success = True
         for filename, address in files_to_flash:
-            if not await flash_file(ws, filename, address):
+            if not await flash_file(ws, filename, address, baud=baud):
                 success = False
                 break
             await asyncio.sleep(0.5)
@@ -105,6 +107,8 @@ def main():
     parser.add_argument('--file', help='Custom file to flash')
     parser.add_argument('--addr', help='Address for custom file')
     parser.add_argument('--project', '-p', help='Project directory (for auto-discovering versioned binary)')
+    parser.add_argument('--baud', '-b', type=int, default=921600, 
+                        help='Flash baud rate (default: 921600, try 1500000 for faster flashing)')
     args = parser.parse_args()
     
     # Determine what to flash
@@ -183,8 +187,9 @@ def main():
     print("ESP32-P4 Flash")
     print(f"Bridge: {WSS_URI}")
     print(f"Files: {len(files)}")
+    print(f"Baud rate: {args.baud}")
     
-    success = asyncio.run(flash_files(files))
+    success = asyncio.run(flash_files(files, baud=args.baud))
     
     if success:
         print("\n✓ Flash complete!")
