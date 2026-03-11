@@ -19,7 +19,7 @@ esp32-p4 build --project /path/to/project
 Container (VS Code) → Tailscale → Bridge (MacBook) → USB → ESP32-P4
 
 **Container:** Edit source, run ESP-IDF toolchain  
-**Bridge:** HTTP upload + WebSocket commands + Serial monitor  
+**Bridge:** HTTP upload + WebSocket commands + USB Serial monitor  
 **Hardware:** Flash target (720×720 MIPI DSI display)
 
 ---
@@ -194,7 +194,7 @@ Creates project at `./projects/esp32-p4-projects/my-new-project/`:
 - Version header auto-generated with git commit on every build
 - Build outputs to `build/my-new-project.bin`
 - **Versioned binary:** `build/my-new-project-73e0af2.bin` (with git commit hash)
-- Binary uploaded with actual name, not renamed to `app.bin`
+- Binary uploaded with versioned binary name, not renamed to `app.bin`
 
 **Serial traceability on boot:**
 ```
@@ -203,6 +203,7 @@ Project: my-new-project
 Commit: 73e0af2
 Built: 2026-03-11 08:15:32
 ```
+The board USB Serial/JTAG interface outputs app serial data at 115200 baud
 
 **Options:**
 - `--keep-name` - Keep original 'HelloWorld' name (directory only)
