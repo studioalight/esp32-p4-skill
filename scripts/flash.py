@@ -119,9 +119,16 @@ def main():
                         if f.name not in ['bootloader.bin', 'partition-table.bin']]
             
             if app_bins:
-                app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
-                app_name = app_bins[0].name
-                print(f"Found versioned binary for full flash: {app_name}")
+                # Prefer versioned binary (has git hash in name) over plain binary
+                versioned_bins = [f for f in app_bins if '-' in f.name]
+                if versioned_bins:
+                    versioned_bins.sort(key=lambda f: len(f.name), reverse=True)
+                    app_name = versioned_bins[0].name
+                    print(f"Found versioned binary for full flash: {app_name}")
+                else:
+                    app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
+                    app_name = app_bins[0].name
+                    print(f"Found binary for full flash: {app_name}")
             else:
                 app_name = 'app.bin'
         else:
@@ -143,11 +150,18 @@ def main():
                         if f.name not in ['bootloader.bin', 'partition-table.bin']]
             
             if app_bins:
-                # Sort by size, largest is likely the app
-                app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
-                versioned = app_bins[0].name
-                files = [(versioned, FLASH_ADDRESSES['app'])]
-                print(f"Found versioned binary: {versioned}")
+                # Prefer versioned binary (has git hash in name) over plain binary
+                versioned_bins = [f for f in app_bins if '-' in f.name]
+                if versioned_bins:
+                    versioned_bins.sort(key=lambda f: len(f.name), reverse=True)
+                    versioned = versioned_bins[0].name
+                    files = [(versioned, FLASH_ADDRESSES['app'])]
+                    print(f"Found versioned binary: {versioned}")
+                else:
+                    app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
+                    versioned = app_bins[0].name
+                    files = [(versioned, FLASH_ADDRESSES['app'])]
+                    print(f"Found binary: {versioned}")
             else:
                 files = [('app.bin', FLASH_ADDRESSES['app'])]
         else:
