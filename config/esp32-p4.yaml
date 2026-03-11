@@ -1,0 +1,23 @@
+bridge:
+  host: esp32-bridge.tailbdd5a.ts.net
+  http_port: 5679
+  ws_port: 5678
+  use_tailscale: true
+
+flash_addresses:
+  bootloader: "0x2000"
+  partition_table: "0x8000"
+  app: "0x10000"
+
+esp_idf:
+  version: "5.4"
+  export_script: ~/esp-idf-v5.4/export.sh
+  default_target: esp32p4
+
+timing:
+  flash_timeout: 60
+  monitor_duration: 15
+  upload_timeout: 30
+
+templates:
+  lcd-display: ~/.openclaw/workspace/esp32-p4-wifi6-touch-lcd-4b-template
