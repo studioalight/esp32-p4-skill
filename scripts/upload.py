@@ -74,9 +74,17 @@ def main():
                     if f.name not in ['bootloader.bin', 'partition-table.bin']]
         
         if app_bins:
-            # Sort by size, largest is likely the app
-            app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
-            app_bin_path = app_bins[0]
+            # Prefer versioned binary (has git hash in name) over plain binary
+            # Sort: first by whether name contains '-' (versioned), then by size
+            versioned_bins = [f for f in app_bins if '-' in f.name]
+            if versioned_bins:
+                # Among versioned, pick the one with longest name (most specific)
+                versioned_bins.sort(key=lambda f: len(f.name), reverse=True)
+                app_bin_path = versioned_bins[0]
+            else:
+                # No versioned found, use largest by size
+                app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
+                app_bin_path = app_bins[0]
             app_bin_name = app_bin_path.name
         else:
             app_bin_path = build_dir / 'HelloWorld.bin'
