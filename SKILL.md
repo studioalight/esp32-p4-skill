@@ -43,7 +43,7 @@ code main/main.c
 
 **Compile project:**
 ```bash
-esp32-p4 build --project ~/workspace/projects/esp32-p4-projects/my-project
+esp32-p4 build --project ./projects/esp32-p4-projects/my-project
 ```
 
 **Output:**
@@ -66,7 +66,7 @@ esp32-p4 build --clean
 
 **Upload to bridge:**
 ```bash
-esp32-p4 upload --project ~/workspace/projects/esp32-p4-projects/my-project
+esp32-p4 upload --project ./projects/esp32-p4-projects/my-project
 ```
 
 **Upload specific files:**
@@ -95,7 +95,7 @@ esp32-p4 flash --app
 
 **Flash with project auto-discovery:**
 ```bash
-esp32-p4 flash --app --project ~/workspace/projects/esp32-p4-projects/my-project
+esp32-p4 flash --app --project ./projects/esp32-p4-projects/my-project
 ```
 ```bash
 esp32-p4 flash \
@@ -134,7 +134,7 @@ esp32-p4 monitor --grep "HELLO_DISPLAY\|ERROR"
 
 **One-command iteration:**
 ```bash
-esp32-p4 iterate --project ~/workspace/projects/esp32-p4-projects/my-project --monitor
+esp32-p4 iterate --project ./projects/esp32-p4-projects/my-project --monitor
 ```
 
 **This runs:**
@@ -149,7 +149,7 @@ esp32-p4 iterate --project ~/workspace/projects/esp32-p4-projects/my-project --m
 
 ## Configuration
 
-**Default config:** `~/.openclaw/workspace/skills/esp32-p4/config/esp32-p4.yaml`
+**Default config:** `./skills/esp32-p4/config/esp32-p4.yaml`
 
 ```yaml
 bridge:
@@ -188,7 +188,7 @@ esp32-p4 build --project ~/my-project --config ~/custom-config.yaml
 esp32-p4 new-project --name my-new-project
 ```
 
-Creates project at `~/workspace/projects/esp32-p4-projects/my-new-project/`:
+Creates project at `./projects/esp32-p4-projects/my-new-project/`:
 - Template cloned from `github.com:studioalight/esp32-p4-display-template`
 - `CMakeLists.txt` updated: `project(my-new-project)`
 - Version header auto-generated with git commit on every build
@@ -206,7 +206,7 @@ Built: 2026-03-11 08:15:32
 
 **Options:**
 - `--keep-name` - Keep original 'HelloWorld' name (directory only)
-- `--workspace` - Custom parent directory (default: ~/workspace/projects/esp32-p4-projects)
+- `--workspace` - Custom parent directory (default: ./projects/esp32-p4-projects)
 
 ---
 
