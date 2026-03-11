@@ -44,7 +44,7 @@ async def flash_file(ws, filename, address, baud=921600, progress=True):
         'action': 'flash',
         'file': filename,
         'addr': address,
-        'baud': baud
+        'rate': baud  # Bridge expects 'rate', not 'baud'
     }))
     
     while True:
