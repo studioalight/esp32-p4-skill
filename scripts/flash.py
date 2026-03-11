@@ -38,6 +38,7 @@ FLASH_ADDRESSES = {
 async def flash_file(ws, filename, address, baud=921600, progress=True):
     """Flash single file"""
     print(f"\nFlashing {filename} at {address}...")
+    print(f"  [DEBUG] esptool equivalent: esptool.py --baud {baud} --port /dev/cu.usbmodem* write_flash {address} {filename}")
     
     await ws.send(json.dumps({
         'action': 'flash',
