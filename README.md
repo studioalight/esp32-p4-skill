@@ -147,6 +147,21 @@ curl https://esp32-bridge.tailbdd5a.ts.net:5679/files
 ./esp32-p4 upload --list
 ```
 
+### After Erase Flash
+
+If you've erased flash, you need to flash **all partitions** (not just the app):
+
+```bash
+# See what files are needed
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --list-files-to-flash
+
+# Flash each (use --no-reset until the final app)
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --file bootloader.bin --addr 0x2000 --no-reset
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --file partition-table.bin --addr 0x8000 --no-reset
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --file storage.bin --addr 0x910000 --no-reset
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project  # app (with reset)
+```
+
 ### Slow Flashing
 
 Default is 1500000 baud (fast). If issues, try lower:
