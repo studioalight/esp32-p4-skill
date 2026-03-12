@@ -118,7 +118,7 @@ async def do_flash(files, baud=921600, reset_after=True):
         print(f"Connected to bridge\n")
         
         # Enter bootloader
-        await ws.send(json.dumps({'action': 'bootloader'}))
+        await ws.send(json.dumps({'action': 'bootloader', 'enter_bootloader': True}))
         await asyncio.sleep(2)
         
         success = True
@@ -130,7 +130,7 @@ async def do_flash(files, baud=921600, reset_after=True):
         
         if reset_after and success:
             print("\nResetting device...")
-            await ws.send(json.dumps({'action': 'reset'}))
+            await ws.send(json.dumps({'reset': True}))
             await asyncio.sleep(1)
             print("✓ Device reset")
         
