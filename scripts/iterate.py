@@ -13,16 +13,20 @@ from pathlib import Path
 OPENCLAW_WORKSPACE = Path(os.environ.get('OPENCLAW_WORKSPACE', os.path.expanduser('~/.openclaw/workspace')))
 
 def resolve_project_path(path_str):
-    """Resolve project path - handle relative paths"""
+    """Resolve project path - handle relative paths and tilde expansion"""
+    # Expand tilde first
+    path_str = os.path.expanduser(path_str)
     path = Path(path_str)
-    if not path.is_absolute():
-        if str(path).startswith('./'):
-            # ./projects/... means relative to current directory
-            return Path.cwd() / str(path)[2:]
-        else:
-            # Relative without ./ - also relative to current directory
-            return Path.cwd() / path
-    return path.expanduser().resolve()
+    
+    if path.is_absolute():
+        return path.resolve()
+    
+    if str(path).startswith('./'):
+        # ./projects/... means relative to current directory
+        return Path.cwd() / str(path)[2:]
+    else:
+        # Relative without ./ - also relative to current directory
+        return Path.cwd() / path
 
 def run_step(name, cmd):
     """Run a step and report"""

@@ -14,14 +14,18 @@ from pathlib import Path
 from datetime import datetime
 
 def resolve_project_path(path_str):
-    """Resolve project path - handle relative paths"""
+    """Resolve project path - handle relative paths and tilde expansion"""
+    # Expand tilde first
+    path_str = os.path.expanduser(path_str)
     path = Path(path_str)
-    if not path.is_absolute():
-        if str(path).startswith('./'):
-            return Path.cwd() / str(path)[2:]
-        else:
-            return Path.cwd() / path
-    return path.expanduser().resolve()
+    
+    if path.is_absolute():
+        return path.resolve()
+    
+    if str(path).startswith('./'):
+        return Path.cwd() / str(path)[2:]
+    else:
+        return Path.cwd() / path
 
 def get_git_info(project_path):
     """Get git commit hash and date"""
