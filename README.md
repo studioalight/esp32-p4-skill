@@ -187,10 +187,18 @@ https://github.com/studioalight/esp32-p4-display-template
 **Skill Repository:**
 https://github.com/studioalight/esp32-p4-skill
 
+**Bridge Repository:**
+https://github.com/studioalight/esp32-bridge
+
+The bridge runs on your MacBook and provides WebSocket/HTTP endpoints for flashing and monitoring ESP32 devices over USB Serial/JTAG.
+
 ## Requirements
 
 - ESP-IDF 5.4+ installed at `~/esp-idf-v5.4`
-- Bridge running on MacBook with P4 connected
+- **Bridge running on MacBook** (`esp32-bridge.py` from [esp32-bridge repo](https://github.com/studioalight/esp32-bridge))
+  - WebSocket server at `wss://esp32-bridge.tailbdd5a.ts.net:5678`
+  - HTTP upload at `https://esp32-bridge.tailbdd5a.ts.net:5679`
+  - Requires ESP32-P4 connected via USB Serial/JTAG
 - Python 3.9+
 - Dependencies: `websockets`, `aiohttp`
 
