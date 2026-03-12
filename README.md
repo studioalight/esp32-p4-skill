@@ -47,7 +47,8 @@ This runs the complete workflow:
 | `new-project` | Create project from template | `./esp32-p4 new-project --name my-project` |
 | `build` | Compile project | `./esp32-p4 build --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `upload` | Upload to bridge | `./esp32-p4 upload --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
-| `flash` | Flash to hardware | `./esp32-p4 flash --full --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
+| `flash` | Flash app binary | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
+| `flash --list` | List available binaries | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --list` |
 | `iterate` | Full workflow | `./esp32-p4 iterate --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `monitor` | Watch serial | `./esp32-p4 monitor --duration 30` |
 
@@ -148,9 +149,16 @@ curl https://esp32-bridge.tailbdd5a.ts.net:5679/files
 
 ### Slow Flashing
 
-Ensure baud rate is set:
+Default is 1500000 baud (fast). If issues, try lower:
 ```bash
-./esp32-p4 flash --full --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --baud 1500000
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --baud 921600
+```
+
+### Flash Specific File
+
+```bash
+./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project \
+  --file storage.bin --addr 0x910000
 ```
 
 ### Versioned Binary Not Used

@@ -83,19 +83,25 @@ esp32-p4 upload --list
 
 ### Flash Phase
 
-**Full flash sequence:**
+**Flash application (default):**
 ```bash
-esp32-p4 flash --full --bridge esp32-bridge.tailbdd5a.ts.net:5678
+esp32-p4 flash --project ./projects/esp32-p4-projects/my-project
 ```
 
-**Flash only application:**
+**List available binaries:**
 ```bash
-esp32-p4 flash --app
+esp32-p4 flash --project ./projects/esp32-p4-projects/my-project --list
 ```
 
-**Flash with project auto-discovery:**
+**Flash with specific baud rate:**
 ```bash
-esp32-p4 flash --app --project ./projects/esp32-p4-projects/my-project
+esp32-p4 flash --project ./projects/esp32-p4-projects/my-project --baud 921600
+```
+
+**Flash specific file:**
+```bash
+esp32-p4 flash --project ./projects/esp32-p4-projects/my-project \
+  --file storage.bin --addr 0x910000
 ```
 ```bash
 esp32-p4 flash \
