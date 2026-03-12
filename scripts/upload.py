@@ -12,20 +12,82 @@ import json
 
 BRIDGE_URL = "https://esp32-bridge.tailbdd5a.ts.net:5679"
 
-# Get OpenClaw workspace root
-OPENCLAW_WORKSPACE = Path(os.environ.get('OPENCLAW_WORKSPACE', os.path.expanduser('~/.openclaw/workspace')))
-
 def resolve_project_path(path_str):
     """Resolve project path - handle relative paths"""
     path = Path(path_str)
     if not path.is_absolute():
         if str(path).startswith('./'):
-            # ./projects/... means relative to current directory
             return Path.cwd() / str(path)[2:]
         else:
-            # Relative without ./ - also relative to current directory
             return Path.cwd() / path
     return path.expanduser().resolve()
+
+def get_files_from_flash_manifest(build_dir):
+    """Get list of files to upload from ESP-IDF build manifest"""
+    flash_args = build_dir / 'flash_args'
+    flasher_json = build_dir / 'flasher_args.json'
+    
+    files = []
+    
+    if flash_args.exists():
+        print("Found flash_args manifest")
+        with open(flash_args) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '@' in line:
+                    filepath, addr = line.rsplit('@', 1)
+                    filename = os.path.basename(filepath)
+                    # Check if file exists in build dir or subdirs
+                    full_path = build_dir / filename
+                    if full_path.exists():
+                        files.append((full_path, filename))
+                    else:
+                        for subdir in ['bootloader', 'partition_table']:
+                            alt_path = build_dir / subdir / filename
+                            if alt_path.exists():
+                                files.append((alt_path, filename))
+                                break
+    
+    elif flasher_json.exists():
+        print("Found flasher_args.json manifest")
+        with open(flasher_json) as f:
+            data = json.load(f)
+            for entry in data.get('flash_files', []):
+                filename = os.path.basename(entry['path'])
+                full_path = build_dir / filename
+                if full_path.exists():
+                    files.append((full_path, filename))
+                else:
+                    for subdir in ['bootloader', 'partition_table']:
+                        alt_path = build_dir / subdir / filename
+                        if alt_path.exists():
+                            files.append((alt_path, filename))
+                                break
+    
+    # Fallback to pattern matching
+    else:
+        print("No flash manifest found, scanning for binaries...")
+        bin_files = list(build_dir.glob('*.bin'))
+        for subdir in ['bootloader', 'partition_table']:
+            subdir_path = build_dir / subdir
+            if subdir_path.exists():
+                bin_files.extend(subdir_path.glob('*.bin'))
+        for bin_file in bin_files:
+            files.append((bin_file, bin_file.name))
+    
+    # Sort: bootloader first, partition table second
+    def sort_key(item):
+        path, name = item
+        if 'bootloader' in name.lower():
+            return (0, name)
+        elif 'partition' in name.lower():
+            return (1, name)
+        else:
+            return (2, name)
+    
+    return sorted(files, key=sort_key)
 
 def upload_file(filepath, dest_name=None):
     """Upload single file to bridge"""
@@ -54,7 +116,7 @@ def upload_file(filepath, dest_name=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Upload binaries to bridge')
-    parser.add_argument('--project', '-p', help='Project directory (absolute or relative to workspace)')
+    parser.add_argument('--project', '-p', help='Project directory')
     parser.add_argument('--file', '-f', help='Single file to upload')
     parser.add_argument('--list', '-l', action='store_true', help='List uploaded files')
     args = parser.parse_args()
@@ -70,42 +132,17 @@ def main():
         project_path = resolve_project_path(args.project)
         build_dir = project_path / 'build'
         
-        # Find the application binary (not bootloader or partition table)
-        bin_files = list(build_dir.glob('*.bin'))
-        app_bins = [f for f in bin_files 
-                    if f.name not in ['bootloader.bin', 'partition-table.bin']]
-        
-        if app_bins:
-            # Prefer versioned binary (has git hash in name) over plain binary
-            # Sort: first by whether name contains '-' (versioned), then by size
-            versioned_bins = [f for f in app_bins if '-' in f.name]
-            if versioned_bins:
-                # Among versioned, pick the one with longest name (most specific)
-                versioned_bins.sort(key=lambda f: len(f.name), reverse=True)
-                app_bin_path = versioned_bins[0]
-            else:
-                # No versioned found, use largest by size
-                app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
-                app_bin_path = app_bins[0]
-            app_bin_name = app_bin_path.name
-        else:
-            app_bin_path = build_dir / 'HelloWorld.bin'
-            app_bin_name = 'HelloWorld.bin'
-        
-        files = [
-            (build_dir / 'bootloader' / 'bootloader.bin', 'bootloader.bin'),
-            (build_dir / 'partition_table' / 'partition-table.bin', 'partition-table.bin'),
-            (app_bin_path, app_bin_name)  # Use actual versioned name
-        ]
+        # Get files from ESP-IDF flash manifest
+        files = get_files_from_flash_manifest(build_dir)
         
         print(f"Uploading from: {project_path}")
-        print(f"Application binary: {app_bin_name}")
+        print(f"Files: {len(files)}")
         print()
         
-        for filepath, dest_name in files:
+        for filepath, filename in files:
             if filepath.exists():
-                print(f"Uploading {dest_name}...")
-                upload_file(filepath, dest_name)
+                print(f"Uploading {filename}...")
+                upload_file(filepath, filename)
             else:
                 print(f"⚠ Not found: {filepath}")
         
