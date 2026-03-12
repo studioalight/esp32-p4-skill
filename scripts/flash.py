@@ -121,8 +121,25 @@ def get_flash_files_from_build(build_dir, project_name):
                     addr = parts[0]
                     filepath = parts[1]
                     filename = os.path.basename(filepath)
+                    
+                    # Check for versioned version of app binary
+                    if not any(x in filename.lower() for x in ['bootloader', 'partition']):
+                        # Look for versioned version (with git hash)
+                        name_base = filename.replace('.bin', '')
+                        versioned_files = list(build_dir.glob(f"{name_base}-*.bin"))
+                        # Filter out files with '-' in name that aren't just version suffix
+                        versioned_files = [f for f in versioned_files if '-' in f.name and not f.name.startswith('.')]
+                        if versioned_files:
+                            # Pick the most specific (longest name)
+                            versioned_files.sort(key=lambda f: len(f.name), reverse=True)
+                            filename = versioned_files[0].name
+                            print(f"  Found versioned: {filename} at {addr}")
+                        else:
+                            print(f"  Found: {filename} at {addr}")
+                    else:
+                        print(f"  Found: {filename} at {addr}")
+                    
                     files_to_flash.append((filename, addr))
-                    print(f"  Found: {filename} at {addr}")
     
     # Fallback to flasher_args.json
     elif flasher_json.exists():
