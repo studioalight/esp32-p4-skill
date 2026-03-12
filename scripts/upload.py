@@ -42,6 +42,20 @@ def get_files_from_flash_manifest(build_dir):
                 if len(parts) >= 2 and parts[0].startswith('0x'):
                     filepath = parts[1]
                     filename = os.path.basename(filepath)
+                    
+                    # Check for versioned version of app binary (not bootloader/partition)
+                    is_system = any(x in filename.lower() for x in ['bootloader', 'partition'])
+                    if not is_system:
+                        name_base = filename.replace('.bin', '')
+                        versioned_files = list(build_dir.glob(f"{name_base}-*.bin"))
+                        versioned_files = [f for f in versioned_files if '-' in f.name]
+                        if versioned_files:
+                            versioned_files.sort(key=lambda f: len(f.name), reverse=True)
+                            filename = versioned_files[0].name
+                            full_path = build_dir / filename
+                            files.append((full_path, filename))
+                            continue
+                    
                     # Check if file exists in build dir
                     full_path = build_dir / filename
                     if full_path.exists():
@@ -67,7 +81,7 @@ def get_files_from_flash_manifest(build_dir):
                         alt_path = build_dir / subdir / filename
                         if alt_path.exists():
                             files.append((alt_path, filename))
-                                break
+                            break
     
     # Fallback to pattern matching
     else:
