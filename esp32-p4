@@ -5,17 +5,19 @@ esp32-p4 - Main entry point
 Usage: esp32-p4 <command> [options]
 
 Commands:
-  build     - Build ESP-IDF project
-  upload    - Upload binaries to bridge
-  flash     - Flash binaries via WebSocket
-  monitor   - Monitor serial output
-  iterate   - Full loop: build + upload + flash + monitor
+  build       - Build ESP-IDF project
+  upload      - Upload binaries to bridge
+  flash       - Flash a single binary via WebSocket
+  flash-batch - Flash multiple binaries in one operation
+  monitor     - Monitor serial output
+  iterate     - Full loop: build + upload + flash + monitor
   new-project - Create from template
 
 Examples:
   esp32-p4 build --project ~/my-project
   esp32-p4 iterate --project ~/my-project --clean
-  esp32-p4 flash --full --monitor
+  esp32-p4 flash --file app.bin --addr 0x10000
+  esp32-p4 flash-batch --project ~/my-project
 """
 
 import sys
@@ -39,6 +41,7 @@ def main():
         'build': 'build.py',
         'upload': 'upload.py',
         'flash': 'flash.py',
+        'flash-batch': 'flash_batch.py',
         'monitor': 'monitor.py',
         'iterate': 'iterate.py',
         'new-project': 'new_project.py'
