@@ -3,6 +3,7 @@
 esp32-p4 build - Compile ESP32-PF projects in container
 
 Generates version header with git commit info before building.
+Configures chip revision compatibility for early P4 samples.
 """
 
 import argparse
@@ -12,18 +13,13 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# Get OpenClaw workspace root
-OPENCLAW_WORKSPACE = Path(os.environ.get('OPENCLAW_WORKSPACE', os.path.expanduser('~/.openclaw/workspace')))
-
 def resolve_project_path(path_str):
     """Resolve project path - handle relative paths"""
     path = Path(path_str)
     if not path.is_absolute():
         if str(path).startswith('./'):
-            # ./projects/... means relative to current directory
             return Path.cwd() / str(path)[2:]
         else:
-            # Relative without ./ - also relative to current directory
             return Path.cwd() / path
     return path.expanduser().resolve()
 
@@ -36,7 +32,6 @@ def get_git_info(project_path):
         )
         if result.returncode == 0:
             commit = result.stdout.strip()
-            # Check if dirty
             dirty_result = subprocess.run(
                 ['git', 'diff', '--quiet'],
                 cwd=project_path, capture_output=True
@@ -64,36 +59,58 @@ def generate_version_header(project_path, project_name):
 #endif /* VERSION_H */
 '''
     
-    # Create components/version directory
     version_component = project_path / 'components' / 'version'
     version_component.mkdir(parents=True, exist_ok=True)
-    
-    # Write header
     (version_component / 'version.h').write_text(version_content)
-    
-    # Write CMakeLists.txt for the component if it doesn't exist
     cmake_file = version_component / 'CMakeLists.txt'
     if not cmake_file.exists():
         cmake_file.write_text('idf_component_register(INCLUDE_DIRS ".")\n')
     
     return git_commit
 
+def configure_chip_revision(project_path):
+    """Configure chip revision compatibility for early P4 samples (v1.0)"""
+    sdkconfig_path = project_path / 'sdkconfig'
+    
+    if not sdkconfig_path.exists():
+        return False
+    
+    content = sdkconfig_path.read_text()
+    
+    # Check if revision already configured
+    if 'CONFIG_ESP32P4_REV_MIN_' in content:
+        return False
+    
+    # Add v1.0 revision compatibility
+    revision_config = """
+# Chip revision compatibility for early P4 samples (v1.0)
+CONFIG_ESP32P4_REV_MIN_100=y
+CONFIG_ESP32P4_REV_MIN_FULL=100
+CONFIG_ESP_REV_MIN_FULL=100
+CONFIG_ESP_EFUSE_BLOCK_REV_MIN_FULL=0
+"""
+    
+    with open(sdkconfig_path, 'a') as f:
+        f.write(revision_config)
+    
+    print("  Configured chip revision for v1.0 compatibility")
+    return True
+
 def main():
     parser = argparse.ArgumentParser(description='Build ESP32-P4 project')
-    parser.add_argument('--project', '-p', required=True, help='Project directory (absolute or relative to workspace)')
+    parser.add_argument('--project', '-p', required=True, help='Project directory')
     parser.add_argument('--clean', action='store_true', help='Clean build first')
     parser.add_argument('--target', default='esp32p4', help='Target chip (default: esp32p4)')
     parser.add_argument('--idf-path', default=os.path.expanduser('~/esp-idf-v5.4'), help='ESP-IDF path')
     args = parser.parse_args()
     
-    # Resolve project path
     project_path = resolve_project_path(args.project)
     
     if not project_path.exists():
         print(f"Error: Project not found: {project_path}", file=sys.stderr)
         sys.exit(1)
     
-    # Extract project name from CMakeLists.txt
+    # Extract project name
     project_name = "project"
     cmake_file = project_path / 'CMakeLists.txt'
     if cmake_file.exists():
@@ -108,30 +125,54 @@ def main():
     git_commit = generate_version_header(project_path, project_name)
     print(f"Git commit: {git_commit}")
     
-    # Build command
-    cmd = f"""
-source {args.idf_path}/export.sh && \
-cd {project_path} && \
-{'rm -rf build && ' if args.clean else ''}
-# Ensure target is set (critical for ESP32-P4)
-if [ ! -f sdkconfig ] || ! grep -q "CONFIG_IDF_TARGET=\\"{args.target}\\"" sdkconfig 2>/dev/null; then
-    idf.py set-target {args.target}
-fi && \
-idf.py build
-"""
+    # Run set-target if needed
+    sdkconfig = project_path / 'sdkconfig'
+    target_set = False
+    if not sdkconfig.exists():
+        print(f"Setting target: {args.target}")
+        result = subprocess.run(
+            f'source {args.idf_path}/export.sh && cd {project_path} && idf.py set-target {args.target}',
+            shell=True, executable='/bin/bash'
+        )
+        if result.returncode != 0:
+            print("✗ set-target failed", file=sys.stderr)
+            sys.exit(1)
+        target_set = True
+    else:
+        with open(sdkconfig) as f:
+            if f'CONFIG_IDF_TARGET="{args.target}"' not in f.read():
+                print(f"Setting target: {args.target}")
+                result = subprocess.run(
+                    f'source {args.idf_path}/export.sh && cd {project_path} && idf.py set-target {args.target}',
+                    shell=True, executable='/bin/bash'
+                )
+                if result.returncode != 0:
+                    print("✗ set-target failed", file=sys.stderr)
+                    sys.exit(1)
+                target_set = True
     
-    print(f"Building: {project_path}")
-    print(f"Target: {args.target}")
+    # Configure chip revision for v1.0 compatibility
+    if target_set or sdkconfig.exists():
+        configure_chip_revision(project_path)
+    
+    # Clean if requested
     if args.clean:
         print("Clean build requested")
-    print()
+        subprocess.run(
+            f'source {args.idf_path}/export.sh && cd {project_path} && rm -rf build',
+            shell=True, executable='/bin/bash'
+        )
     
-    result = subprocess.run(cmd, shell=True, executable='/bin/bash')
+    # Build
+    print(f"Building: {project_path}")
+    print(f"Target: {args.target}")
+    result = subprocess.run(
+        f'source {args.idf_path}/export.sh && cd {project_path} && idf.py build',
+        shell=True, executable='/bin/bash'
+    )
     
     if result.returncode == 0:
         print("\n✓ Build successful!")
-        
-        # Find the output binary (ESP-IDF names it after the project)
         build_dir = project_path / 'build'
         expected_app = build_dir / f"{project_name}.bin"
         
@@ -139,7 +180,6 @@ idf.py build
             size = expected_app.stat().st_size
             print(f"  build/{expected_app.name}: {size:,} bytes")
             
-            # Create versioned copy
             if git_commit != 'unknown':
                 versioned_name = f"{project_name}-{git_commit}.bin"
                 versioned_path = build_dir / versioned_name
@@ -147,11 +187,7 @@ idf.py build
                     import shutil
                     shutil.copy2(expected_app, versioned_path)
                     print(f"  {versioned_name}: {size:,} bytes (versioned)")
-                else:
-                    print(f"  {versioned_name}: already exists")
             
-            print(f"\nReady: esp32-p4 upload --project {args.project}")
-        else:
             print(f"\nReady: esp32-p4 upload --project {args.project}")
     else:
         print("\n✗ Build failed", file=sys.stderr)
