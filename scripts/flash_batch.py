@@ -149,7 +149,7 @@ async def do_flash_batch(files, baud=1500000, reset_after=True):
     """Execute batch flash via WebSocket"""
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT.CERT_NONE
+    ssl_context.verify_mode = ssl.CERT_NONE
     
     async with websockets.connect(WSS_URI, ssl=ssl_context, ping_interval=None) as ws:
         print(f"Connected to bridge")
