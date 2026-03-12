@@ -230,6 +230,19 @@ The board USB Serial/JTAG interface outputs app serial data at 115200 baud
 ### "Build fails"
 - ESP-IDF not activated: Run `source ~/esp-idf-v5.4/export.sh`
 - Missing components: Check `idf.py reconfigure`
+- **Early engineering sample (Rev 100):** Build fails with silicon revision mismatch? Add to `sdkconfig.defaults`:
+  ```ini
+  CONFIG_ESP32P4_REV_MIN_100=y
+  CONFIG_ESP32P4_REV_MIN_FULL=100
+  CONFIG_ESP_REV_MIN_FULL=100
+  CONFIG_ESP_EFUSE_BLOCK_REV_MIN_FULL=0
+  CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+  ```
+  Without these, `sdkconfig.esp32-p4` defaults to rev 301 which fails on early silicon.
+
+### "Flash verification failed"
+- Check chip revision: `esptool.py chip_id` should show rev 100 for engineering samples
+- Wrong binary for silicon revision: Rebuild with correct `sdkconfig.defaults`
 
 ---
 
