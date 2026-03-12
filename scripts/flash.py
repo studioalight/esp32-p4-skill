@@ -74,7 +74,7 @@ def get_build_files(build_dir, list_only=False):
     app_files = [f for f in files if f[0].endswith('.bin') and not any(x in f[0].lower() for x in ['bootloader', 'partition', 'storage'])]
     return app_files[:1] if app_files else files[:1] if files else []
 
-async def flash_file(ws, filename, address, baud=921600):
+async def flash_file(ws, filename, address, baud=1500000):
     """Flash single file"""
     print(f"\nFlashing {filename} at {address}...")
     
@@ -157,7 +157,15 @@ def main():
         print(f"Flashable files in {build_dir}:")
         files = get_build_files(build_dir, list_only=True)
         for filename, addr in files:
-            size = (build_dir / filename).stat().st_size if (build_dir / filename).exists() else 0
+            file_path = build_dir / filename
+            if not file_path.exists():
+                # Check subdirectories
+                for subdir in ['bootloader', 'partition_table']:
+                    alt_path = build_dir / subdir / filename
+                    if alt_path.exists():
+                        file_path = alt_path
+                        break
+            size = file_path.stat().st_size if file_path.exists() else 0
             print(f"  {filename:40s} at {addr:10s} ({size:,} bytes)")
         return
     
