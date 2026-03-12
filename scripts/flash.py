@@ -126,7 +126,8 @@ async def do_flash(files, baud=921600, reset_after=True):
             if not await flash_file(ws, filename, address, baud):
                 success = False
                 break
-            await asyncio.sleep(0.5)
+            # Longer delay to let bridge finish verify/reset
+            await asyncio.sleep(3.0)
         
         if reset_after and success:
             print("\nResetting device...")
