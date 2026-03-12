@@ -107,7 +107,7 @@ def get_flash_files_from_build(build_dir, project_name):
     
     files_to_flash = []
     
-    # Try flash_args file (simple format: file@addr)
+    # Try flash_args file (ESP-IDF format: 0xADDR path/to/file.bin)
     if flasher_args.exists():
         print("Found flash_args manifest")
         with open(flasher_args) as f:
@@ -115,11 +115,14 @@ def get_flash_files_from_build(build_dir, project_name):
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                # Parse "file.bin@0x10000" format
-                if '@' in line:
-                    filepath, addr = line.rsplit('@', 1)
+                # Parse "0x2000 bootloader/bootloader.bin" format
+                parts = line.split(maxsplit=1)
+                if len(parts) >= 2 and parts[0].startswith('0x'):
+                    addr = parts[0]
+                    filepath = parts[1]
                     filename = os.path.basename(filepath)
                     files_to_flash.append((filename, addr))
+                    print(f"  Found: {filename} at {addr}")
     
     # Fallback to flasher_args.json
     elif flasher_json.exists():

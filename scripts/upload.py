@@ -29,6 +29,7 @@ def get_files_from_flash_manifest(build_dir):
     
     files = []
     
+    # Try flash_args file (ESP-IDF format: 0xADDR path/to/file.bin)
     if flash_args.exists():
         print("Found flash_args manifest")
         with open(flash_args) as f:
@@ -36,10 +37,12 @@ def get_files_from_flash_manifest(build_dir):
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                if '@' in line:
-                    filepath, addr = line.rsplit('@', 1)
+                # Parse "0x2000 bootloader/bootloader.bin" format
+                parts = line.split(maxsplit=1)
+                if len(parts) >= 2 and parts[0].startswith('0x'):
+                    filepath = parts[1]
                     filename = os.path.basename(filepath)
-                    # Check if file exists in build dir or subdirs
+                    # Check if file exists in build dir
                     full_path = build_dir / filename
                     if full_path.exists():
                         files.append((full_path, filename))
