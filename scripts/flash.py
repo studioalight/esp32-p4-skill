@@ -99,6 +99,73 @@ async def flash_files(files_to_flash, baud=921600, reset_after=True):
         
         return success
 
+def get_flash_files_from_build(build_dir, project_name):
+    """Get list of files to flash from ESP-IDF build output"""
+    # Check for flasher_args.json (ESP-IDF generated manifest)
+    flasher_args = build_dir / 'flash_args'
+    flasher_json = build_dir / 'flasher_args.json'
+    
+    files_to_flash = []
+    
+    # Try flash_args file (simple format: file@addr)
+    if flasher_args.exists():
+        print("Found flash_args manifest")
+        with open(flasher_args) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                # Parse "file.bin@0x10000" format
+                if '@' in line:
+                    filepath, addr = line.rsplit('@', 1)
+                    filename = os.path.basename(filepath)
+                    files_to_flash.append((filename, addr))
+    
+    # Fallback to flasher_args.json
+    elif flasher_json.exists():
+        print("Found flasher_args.json manifest")
+        import json
+        with open(flasher_json) as f:
+            data = json.load(f)
+            for entry in data.get('flash_files', []):
+                filename = os.path.basename(entry['path'])
+                files_to_flash.append((filename, entry['offset']))
+    
+    # Final fallback: scan for known patterns
+    else:
+        print("No flash manifest found, using pattern matching...")
+        bin_files = list(build_dir.glob('*.bin'))
+        
+        # Known partition types and their addresses
+        for bin_file in bin_files:
+            name = bin_file.name.lower()
+            if 'bootloader' in name:
+                files_to_flash.append((bin_file.name, FLASH_ADDRESSES['bootloader']))
+            elif 'partition_table' in name or 'partition-table' in name:
+                files_to_flash.append((bin_file.name, FLASH_ADDRESSES['partition']))
+            elif 'storage' in name:
+                # Storage partition typically at 0x110000
+                files_to_flash.append((bin_file.name, '0x110000'))
+            elif 'ota' in name:
+                # OTA data at 0xe000
+                files_to_flash.append((bin_file.name, '0xe000'))
+        
+        # Application binary (prefer versioned)
+        app_bins = [f for f in bin_files 
+                   if f.name not in ['bootloader.bin', 'partition-table.bin'] 
+                   and not any(x in f.name.lower() for x in ['storage', 'ota'])]
+        if app_bins:
+            versioned_bins = [f for f in app_bins if '-' in f.name]
+            if versioned_bins:
+                versioned_bins.sort(key=lambda f: len(f.name), reverse=True)
+                files_to_flash.append((versioned_bins[0].name, FLASH_ADDRESSES['app']))
+            else:
+                app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
+                files_to_flash.append((app_bins[0].name, FLASH_ADDRESSES['app']))
+    
+    return files_to_flash
+
+# Then in main(), replace the hardcoded files list for --full:
 def main():
     parser = argparse.ArgumentParser(description='Flash binaries via bridge')
     parser.add_argument('--full', action='store_true', help='Flash all: bootloader, partition, app')
@@ -114,36 +181,29 @@ def main():
     
     # Determine what to flash
     if args.full:
-        # Get app binary name, with auto-discovery if project provided
+        # Use ground truth from ESP-IDF build output
         if args.project:
             project_path = resolve_project_path(args.project)
             build_dir = project_path / 'build'
-            # Find all .bin files directly in build/, not in subdirs
-            bin_files = list(build_dir.glob('*.bin'))
-            app_bins = [f for f in bin_files 
-                        if f.name not in ['bootloader.bin', 'partition-table.bin']]
-            
-            if app_bins:
-                # Prefer versioned binary (has git hash in name) over plain binary
-                versioned_bins = [f for f in app_bins if '-' in f.name]
-                if versioned_bins:
-                    versioned_bins.sort(key=lambda f: len(f.name), reverse=True)
-                    app_name = versioned_bins[0].name
-                    print(f"Found versioned binary for full flash: {app_name}")
-                else:
-                    app_bins.sort(key=lambda f: f.stat().st_size, reverse=True)
-                    app_name = app_bins[0].name
-                    print(f"Found binary for full flash: {app_name}")
-            else:
-                app_name = 'app.bin'
+            files = get_flash_files_from_build(build_dir, "project")
+            if not files:
+                print("Warning: No flash files found in build directory, using defaults")
+                files = [
+                    ('bootloader.bin', FLASH_ADDRESSES['bootloader']),
+                    ('partition-table.bin', FLASH_ADDRESSES['partition']),
+                    ('app.bin', FLASH_ADDRESSES['app'])
+                ]
         else:
-            app_name = 'app.bin'
+            # Fallback to defaults
+            files = [
+                ('bootloader.bin', FLASH_ADDRESSES['bootloader']),
+                ('partition-table.bin', FLASH_ADDRESSES['partition']),
+                ('app.bin', FLASH_ADDRESSES['app'])
+            ]
         
-        files = [
-            ('bootloader.bin', FLASH_ADDRESSES['bootloader']),
-            ('partition-table.bin', FLASH_ADDRESSES['partition']),
-            (app_name, FLASH_ADDRESSES['app'])
-        ]
+        print(f"Will flash {len(files)} file(s):")
+        for fname, addr in files:
+            print(f"  {fname} at {addr}")
     elif args.app:
         # Discover versioned binaries in project
         if args.project:
