@@ -103,11 +103,35 @@ esp32-p4 flash --project ./projects/esp32-p4-projects/my-project --baud 921600
 esp32-p4 flash --project ./projects/esp32-p4-projects/my-project \
   --file storage.bin --addr 0x910000
 ```
+
+### Batch Flash (Multi-file, Atomic)
+
+**Flash all files in one operation:**
 ```bash
-esp32-p4 flash \
-  --file bootloader.bin --addr 0x2000 \
-  --file partition-table.bin --addr 0x8000 \
-  --file my-project-73e0af2.bin --addr 0x10000
+esp32-p4 flash-batch --project ./projects/esp32-p4-projects/my-project
+```
+
+Uses ESP-IDF `flash_args` manifest as ground truth. Flashes all detected files in correct order with a single esptool invocation.
+
+**Preview flash plan:**
+```bash
+esp32-p4 flash-batch --project ./projects/esp32-p4-projects/my-project --dry-run
+```
+
+**Skip storage.bin for faster code-only cycles:**
+```bash
+esp32-p4 flash-batch --project ./projects/esp32-p4-projects/my-project --skip-storage
+```
+
+**Manual file list:**
+```bash
+esp32-p4 flash-batch --project ./projects/esp32-p4-projects/my-project \
+  --files bootloader.bin 0x2000 partition-table.bin 0x8000 app.bin 0x10000
+```
+
+**No-reset option:**
+```bash
+esp32-p4 flash-batch --project ./projects/esp32-p4-projects/my-project --no-reset
 ```
 
 **Watch flash progress:**

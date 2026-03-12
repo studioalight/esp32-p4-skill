@@ -47,8 +47,9 @@ This runs the complete workflow:
 | `new-project` | Create project from template | `./esp32-p4 new-project --name my-project` |
 | `build` | Compile project | `./esp32-p4 build --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `upload` | Upload to bridge | `./esp32-p4 upload --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
-| `flash` | Flash app binary | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
+| `flash` | Flash single app binary | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `flash --list-files-to-flash` | List available binaries | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --list-files-to-flash` |
+| `flash-batch` | Flash all files atomically | `./esp32-p4 flash-batch --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `iterate` | Full workflow | `./esp32-p4 iterate --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `monitor` | Watch serial | `./esp32-p4 monitor --duration 30` |
 
@@ -101,6 +102,26 @@ Default: 1500000 (fast flashing)
 ```
 
 Options: `460800`, `921600`, `1500000`, `2000000`
+
+### Batch Flash (Multi-file, Atomic)
+
+Flash all files from ESP-IDF build manifest in one atomic operation:
+
+```bash
+./esp32-p4 flash-batch --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project
+```
+
+This uses the ESP-IDF `flash_args` manifest as ground truth, flashing in correct order with a single esptool invocation. No race conditions, no multiple reset cycles.
+
+**Preview flash plan:**
+```bash
+./esp32-p4 flash-batch --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --dry-run
+```
+
+**Skip storage.bin for faster code-only cycles:**
+```bash
+./esp32-p4 flash-batch --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --skip-storage
+```
 
 ### Project Location
 
