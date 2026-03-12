@@ -90,7 +90,7 @@ esp32-p4 flash --project ./projects/esp32-p4-projects/my-project
 
 **List available binaries:**
 ```bash
-esp32-p4 flash --project ./projects/esp32-p4-projects/my-project --list
+esp32-p4 flash --project ./projects/esp32-p4-projects/my-project --list-files-to-flash
 ```
 
 **Flash with specific baud rate:**

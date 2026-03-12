@@ -48,7 +48,7 @@ This runs the complete workflow:
 | `build` | Compile project | `./esp32-p4 build --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `upload` | Upload to bridge | `./esp32-p4 upload --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `flash` | Flash app binary | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
-| `flash --list` | List available binaries | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --list` |
+| `flash --list-files-to-flash` | List available binaries | `./esp32-p4 flash --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project --list-files-to-flash` |
 | `iterate` | Full workflow | `./esp32-p4 iterate --project ~/.openclaw/workspace/projects/esp32-p4-projects/my-project` |
 | `monitor` | Watch serial | `./esp32-p4 monitor --duration 30` |
 

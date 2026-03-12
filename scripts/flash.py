@@ -142,7 +142,7 @@ def main():
     parser.add_argument('--file', '-f', help='Specific file to flash')
     parser.add_argument('--addr', '-a', help='Address for specific file')
     parser.add_argument('--baud', '-b', type=int, default=1500000, help='Baud rate (default: 1500000)')
-    parser.add_argument('--list', '-l', action='store_true', help='List available binaries without flashing')
+    parser.add_argument('--list-files-to-flash', '-l', action='store_true', help='List available binaries without flashing')
     parser.add_argument('--no-reset', action='store_true', help='Skip device reset after flash')
     args = parser.parse_args()
     
@@ -153,7 +153,7 @@ def main():
         print(f"Error: Build directory not found: {build_dir}", file=sys.stderr)
         sys.exit(1)
     
-    if args.list:
+    if args.list_files_to_flash:
         print(f"Flashable files in {build_dir}:")
         files = get_build_files(build_dir, list_only=True)
         for filename, addr in files:
