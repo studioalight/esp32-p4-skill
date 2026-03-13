@@ -169,7 +169,7 @@ def main():
     )
     parser.add_argument('--project', '-p', required=True, 
                        help='Project directory (contains build/ folder)')
-    parser.add_argument('--baud', '-b', type=int, default=1500000, 
+    parser.add_argument('--baud', '-b', type=int, default=3000000, 
                        help='Baud rate (default: 1500000)')
     parser.add_argument('--no-reset', action='store_true',
                        help='Skip device reset after all files flashed')

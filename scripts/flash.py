@@ -146,7 +146,7 @@ def main():
     parser.add_argument('--project', '-p', required=True, help='Project directory')
     parser.add_argument('--file', '-f', help='Specific file to flash')
     parser.add_argument('--addr', '-a', help='Address for specific file')
-    parser.add_argument('--baud', '-b', type=int, default=1500000, help='Baud rate (default: 1500000)')
+    parser.add_argument('--baud', '-b', type=int, default=3000000, help='Baud rate (default: 3000000, ESP32-P4 native USB max stable)')
     parser.add_argument('--list-files-to-flash', '-l', action='store_true', help='List available binaries without flashing')
     parser.add_argument('--no-reset', action='store_true', help='Skip device reset after flash')
     args = parser.parse_args()
