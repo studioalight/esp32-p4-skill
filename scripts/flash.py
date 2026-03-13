@@ -53,7 +53,8 @@ def get_build_files(build_dir, list_only=False):
                         versioned = list(build_dir.glob(f"{name_base}-*.bin"))
                         versioned = [f for f in versioned if '-' in f.name and not f.name.startswith('.')]
                         if versioned:
-                            versioned.sort(key=lambda f: len(f.name), reverse=True)
+                            # Sort by modification time (newest first) to get latest build
+                            versioned.sort(key=lambda f: os.path.getmtime(f), reverse=True)
                             filename = versioned[0].name
                     
                     files.append((filename, addr))

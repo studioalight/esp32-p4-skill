@@ -147,7 +147,8 @@ def get_files_from_flash_manifest(build_dir):
                         versioned_files = list(build_dir.glob(f"{name_base}-*.bin"))
                         versioned_files = [f for f in versioned_files if '-' in f.name]
                         if versioned_files:
-                            versioned_files.sort(key=lambda f: len(f.name), reverse=True)
+                            # Sort by modification time (newest first) to get latest build
+                            versioned_files.sort(key=lambda f: os.path.getmtime(f), reverse=True)
                             filename = versioned_files[0].name
                             full_path = build_dir / filename
                             files.append((full_path, filename))
