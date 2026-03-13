@@ -33,7 +33,10 @@ def resolve_project_path(path_str):
         return Path.cwd() / path
 
 async def discover_bridge_ip():
-    """Connect via WebSocket and discover Tailscale IP for faster uploads"""
+    """Connect via WebSocket and discover IPs for faster uploads
+    
+    Priority: local LAN IP > Tailscale IP > None (use service)
+    """
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -49,33 +52,39 @@ async def discover_bridge_ip():
                 data = json.loads(msg)
                 
                 if data.get('type') == 'status':
+                    # Prefer local LAN IP (same network, no Tailscale overhead)
+                    local_ip = data.get('local_ip')
+                    if local_ip:
+                        return f"http://{local_ip}:5679", 'local'
+                    
+                    # Fall back to Tailscale IP
                     ts_ip = data.get('tailscale_ip')
                     if ts_ip:
-                        return f"http://{ts_ip}:5679"  # HTTP direct
+                        return f"http://{ts_ip}:5679", 'tailscale'
             except asyncio.TimeoutError:
                 pass
     except Exception as e:
         print(f"  [IP discovery fail: {e}]", file=sys.stderr) 
         
-    return None
+    return None, None
 
 def get_bridge_url():
     """Get bridge URL - try to use cached/direct IP first"""
-    cache_file = Path.home() / '.esp32-bridge' / 'tailscale_ip'
+    cache_file = Path.home() / '.esp32-bridge' / 'direct_endpoint'
     
-    # Try cached IP from previous discovery
+    # Try cached endpoint from previous discovery
     if cache_file.exists():
         try:
-            cached_ip = cache_file.read_text().strip()
-            if cached_ip:
-                url = f"http://{cached_ip}:5679"
+            cached = cache_file.read_text().strip()
+            if cached:
+                url, ip_type = cached.split('|') if '|' in cached else (cached, 'unknown')
                 # Quick test if it's reachable
                 result = subprocess.run(
                     ['curl', '-k', '-s', '--max-time', '2', f'{url}/files'],
                     capture_output=True, timeout=3
                 )
                 if result.returncode == 0:
-                    return url
+                    return url, ip_type
         except:
             pass
     
@@ -86,20 +95,19 @@ def get_bridge_url():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     
-    direct_url = loop.run_until_complete(discover_bridge_ip())
+    direct_url, ip_type = loop.run_until_complete(discover_bridge_ip())
     if direct_url:
         # Cache it for next time
         try:
             cache_file.parent.mkdir(parents=True, exist_ok=True)
-            ip = direct_url.replace('http://', '').replace(':5679', '')
-            cache_file.write_text(ip)
-            return direct_url
+            cache_file.write_text(f"{direct_url}|{ip_type}")
+            return direct_url, ip_type
         except:
             pass
-        return direct_url
+        return direct_url, ip_type
     
     # Fallback to MagicDNS
-    return BRIDGE_URL
+    return BRIDGE_URL, 'service'
 
 def get_files_from_flash_manifest(build_dir):
     """Get list of files to upload from ESP-IDF build manifest"""
@@ -218,13 +226,14 @@ def main():
     parser.add_argument('--list', '-l', action='store_true', help='List uploaded files')
     args = parser.parse_args()
     
-    # Discover optimal bridge URL (via WebSocket for Tailscale IP)
+    # Discover optimal bridge URL (prefer local LAN > Tailscale > Service)
     if not args.list:
         print("Discovering bridge...")
-    bridge_url = get_bridge_url()
+    bridge_url, ip_type = get_bridge_url()
     if bridge_url != BRIDGE_URL:
         url_display = bridge_url.replace('http://', '').replace(':5679', '')
-        print(f"  Using direct connection: {url_display}")
+        conn_type = 'local' if ip_type == 'local' else 'direct'
+        print(f"  Using {conn_type} connection: {url_display}")
     
     if args.list:
         result = subprocess.run(['curl', '-k', '-s', f'{bridge_url}/files'], capture_output=True, text=True)
