@@ -35,7 +35,7 @@ def resolve_project_path(path_str):
 async def discover_bridge_ip():
     """Connect via WebSocket and discover IPs for faster uploads
     
-    Priority: local LAN IP > Tailscale IP > None (use service)
+    Priority: local LAN IP (if reachable) > Tailscale IP > None (use service)
     """
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -55,7 +55,17 @@ async def discover_bridge_ip():
                     # Prefer local LAN IP (same network, no Tailscale overhead)
                     local_ip = data.get('local_ip')
                     if local_ip:
-                        return f"http://{local_ip}:5679", 'local'
+                        # Test if local IP is reachable from container
+                        test_url = f"http://{local_ip}:5679/files"
+                        try:
+                            result = subprocess.run(
+                                ['curl', '-k', '-s', '--max-time', '2', test_url],
+                                capture_output=True, timeout=3
+                            )
+                            if result.returncode == 0:
+                                return f"http://{local_ip}:5679", 'local'
+                        except:
+                            pass  # Local not reachable, fall through
                     
                     # Fall back to Tailscale IP
                     ts_ip = data.get('tailscale_ip')
