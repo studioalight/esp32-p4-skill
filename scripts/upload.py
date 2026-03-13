@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 esp32-p4 upload - Upload binaries to bridge via HTTP
+
+Auto-discovers bridge's Tailscale IP via WebSocket for faster direct connection.
 """
 
 import argparse
@@ -9,8 +11,12 @@ import sys
 import os
 from pathlib import Path
 import json
+import asyncio
+import websockets
+import ssl
 
 BRIDGE_URL = "https://esp32-bridge.tailbdd5a.ts.net:5679"
+BRIDGE_WS = "wss://esp32-bridge.tailbdd5a.ts.net:5678"
 
 def resolve_project_path(path_str):
     """Resolve project path - handle relative paths and tilde expansion"""
@@ -25,6 +31,75 @@ def resolve_project_path(path_str):
         return Path.cwd() / str(path)[2:]
     else:
         return Path.cwd() / path
+
+async def discover_bridge_ip():
+    """Connect via WebSocket and discover Tailscale IP for faster uploads"""
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    
+    try:
+        async with websockets.connect(BRIDGE_WS, ssl=ssl_context, ping_interval=None) as ws:
+            # Request status
+            await ws.send(json.dumps({'action': 'status'}))
+            
+            # Wait for response with 5 second timeout
+            try:
+                msg = await asyncio.wait_for(ws.recv(), timeout=5.0)
+                data = json.loads(msg)
+                
+                if data.get('type') == 'status':
+                    ts_ip = data.get('tailscale_ip')
+                    if ts_ip:
+                        return f"http://{ts_ip}:5679"  # HTTP direct
+            except asyncio.TimeoutError:
+                pass
+    except Exception as e:
+        print(f"  [IP discovery fail: {e}]", file=sys.stderr) 
+        
+    return None
+
+def get_bridge_url():
+    """Get bridge URL - try to use cached/direct IP first"""
+    cache_file = Path.home() / '.esp32-bridge' / 'tailscale_ip'
+    
+    # Try cached IP from previous discovery
+    if cache_file.exists():
+        try:
+            cached_ip = cache_file.read_text().strip()
+            if cached_ip:
+                url = f"http://{cached_ip}:5679"
+                # Quick test if it's reachable
+                result = subprocess.run(
+                    ['curl', '-k', '-s', '--max-time', '2', f'{url}/files'],
+                    capture_output=True, timeout=3
+                )
+                if result.returncode == 0:
+                    return url
+        except:
+            pass
+    
+    # Try WebSocket discovery
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    direct_url = loop.run_until_complete(discover_bridge_ip())
+    if direct_url:
+        # Cache it for next time
+        try:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            ip = direct_url.replace('http://', '').replace(':5679', '')
+            cache_file.write_text(ip)
+            return direct_url
+        except:
+            pass
+        return direct_url
+    
+    # Fallback to MagicDNS
+    return BRIDGE_URL
 
 def get_files_from_flash_manifest(build_dir):
     """Get list of files to upload from ESP-IDF build manifest"""
@@ -110,14 +185,15 @@ def get_files_from_flash_manifest(build_dir):
     
     return sorted(files, key=sort_key)
 
-def upload_file(filepath, dest_name=None):
+def upload_file(filepath, dest_name=None, bridge_url=None):
     """Upload single file to bridge"""
     filepath = Path(filepath)
     dest = dest_name if dest_name else filepath.name
+    url = bridge_url if bridge_url else BRIDGE_URL
     cmd = [
         'curl', '-k', '-s',
         '-F', f'file=@{filepath};filename={dest}',
-        f'{BRIDGE_URL}/upload'
+        f'{url}/upload'
     ]
     
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -142,12 +218,30 @@ def main():
     parser.add_argument('--list', '-l', action='store_true', help='List uploaded files')
     args = parser.parse_args()
     
+    # Discover optimal bridge URL (via WebSocket for Tailscale IP)
+    if not args.list:
+        print("Discovering bridge...")
+    bridge_url = get_bridge_url()
+    if bridge_url != BRIDGE_URL:
+        url_display = bridge_url.replace('http://', '').replace(':5679', '')
+        print(f"  Using direct connection: {url_display}")
+    
     if args.list:
-        subprocess.run(['curl', '-k', '-s', f'{BRIDGE_URL}/files'])
+        result = subprocess.run(['curl', '-k', '-s', f'{bridge_url}/files'], capture_output=True, text=True)
+        try:
+            data = json.loads(result.stdout)
+            if 'files' in data:
+                print(f"Files on bridge ({bridge_url.replace('http://', '').replace('https://', '').replace(':5679', '')}):")
+                for f in data['files']:
+                    print(f"  {f['name']:40s} {f['size']:,} bytes")
+            else:
+                print(result.stdout)
+        except:
+            print(result.stdout)
         return
     
     if args.file:
-        upload_file(args.file)
+        upload_file(args.file, bridge_url=bridge_url)
     
     elif args.project:
         project_path = resolve_project_path(args.project)
@@ -163,7 +257,7 @@ def main():
         for filepath, filename in files:
             if filepath.exists():
                 print(f"Uploading {filename}...")
-                upload_file(filepath, filename)
+                upload_file(filepath, filename, bridge_url=bridge_url)
             else:
                 print(f"⚠ Not found: {filepath}")
         
