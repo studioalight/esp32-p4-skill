@@ -87,14 +87,15 @@ def scan_for_storage(build_dir):
     return None
 
 
-async def flash_batch(ws, files, baud=1500000, reset_after=True):
+async def flash_batch(ws, files, baud=1500000, reset_after=True, verify=True):
     """Send batch flash command to bridge"""
     
     await ws.send(json.dumps({
         'action': 'flash_batch',
         'files': files,
         'rate': baud,
-        'reset_after': reset_after
+        'reset_after': reset_after,
+        'verify': verify
     }))
     
     file_count = len(files)
@@ -145,7 +146,7 @@ async def flash_batch(ws, files, baud=1500000, reset_after=True):
     return True
 
 
-async def do_flash_batch(files, baud=1500000, reset_after=True):
+async def do_flash_batch(files, baud=1500000, reset_after=True, verify=True):
     """Execute batch flash via WebSocket"""
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -178,6 +179,8 @@ def main():
                        help='Skip storage.bin (useful for quick test cycles)')
     parser.add_argument('--dry-run', '-n', action='store_true',
                        help='Show what would be flashed without flashing')
+    parser.add_argument('--no-verify', action='store_true',
+                       help='Skip flash verification (30% faster, risky)')
     args = parser.parse_args()
     
     project_path = resolve_project_path(args.project)
@@ -252,10 +255,12 @@ def main():
         print(f"\n✓ Dry run complete - use without --dry-run to flash")
         return
     
-    success = asyncio.run(do_flash_batch(files, baud=args.baud, reset_after=not args.no_reset))
+    success = asyncio.run(do_flash_batch(files, baud=args.baud, reset_after=not args.no_reset, verify=not args.no_verify))
     
     if success:
         print(f"\n✓ Flash batch complete!")
+        if args.no_verify:
+            print(f"  ⚠ Verification skipped - use --no-verify with caution")
         print(f"Monitor with: esp32-p4 monitor")
     else:
         print(f"\n✗ Flash batch failed", file=sys.stderr)
