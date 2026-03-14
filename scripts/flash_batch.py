@@ -96,7 +96,7 @@ async def flash_batch(ws, files, baud=1500000, reset_after=True):
         'files': files,
         'rate': baud,
         'reset_after': reset_after,
-        'verify': verify
+        'verify': True
     }))
     
     file_count = len(files)
