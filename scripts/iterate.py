@@ -91,7 +91,6 @@ def main():
     if not args.no_flash:
         flash_cmd = [
             'python3', str(scripts_dir / 'flash.py'),
-            '--app',
             '--project', args.project  # Pass original path for version discovery
         ]
         
