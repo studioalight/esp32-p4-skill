@@ -91,7 +91,8 @@ def main():
     if not args.no_flash:
         flash_cmd = [
             'python3', str(scripts_dir / 'flash.py'),
-            '--project', args.project  # Pass original path for version discovery
+            '--project', args.project,  # Pass original path for version discovery
+            '--no-reset'  # Don't reset here - we'll reset in monitor to capture boot
         ]
         
         if not run_step('FLASH', flash_cmd):
@@ -101,7 +102,8 @@ def main():
     if not args.no_monitor:
         monitor_cmd = [
             'python3', str(scripts_dir / 'monitor.py'),
-            '--duration', str(args.monitor_duration)
+            '--duration', str(args.monitor_duration),
+            '--reset'  # Reset device after connecting to capture boot output
         ]
         
         run_step('MONITOR', monitor_cmd)
