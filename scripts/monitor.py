@@ -13,7 +13,7 @@ import re
 
 WSS_URI = "wss://esp32-bridge.tailbdd5a.ts.net:5678"
 
-async def monitor_serial(duration=None, grep=None):
+async def monitor_serial(duration=None, grep=None, reset=False):
     """Monitor serial output"""
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -21,6 +21,14 @@ async def monitor_serial(duration=None, grep=None):
     
     async with websockets.connect(WSS_URI, ssl=ssl_context, ping_interval=None) as ws:
         print(f"Connected to bridge")
+        
+        # Reset device if requested
+        if reset:
+            print("Resetting device...")
+            await ws.send(json.dumps({'reset': True}))
+            await asyncio.sleep(1)
+            print("Device reset complete\n")
+        
         print(f"Monitoring serial for {duration}s...\n")
         
         start = asyncio.get_event_loop().time()
@@ -74,6 +82,7 @@ def main():
     parser.add_argument('--duration', '-d', type=int, default=15, help='Monitor duration in seconds (default: 15)')
     parser.add_argument('--grep', '-g', help='Filter output by pattern')
     parser.add_argument('--forever', '-f', action='store_true', help='Monitor forever (Ctrl+C to stop)')
+    parser.add_argument('--reset', '-r', action='store_true', help='Reset device before monitoring')
     args = parser.parse_args()
     
     print("ESP32-P4 Serial Monitor")
@@ -82,7 +91,7 @@ def main():
     duration = None if args.forever else args.duration
     
     try:
-        asyncio.run(monitor_serial(duration, args.grep))
+        asyncio.run(monitor_serial(duration, args.grep, args.reset))
     except KeyboardInterrupt:
         print("\n[Stopped by user]")
     
