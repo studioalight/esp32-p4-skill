@@ -1,0 +1,24 @@
+# --- Build Artifacts ---
+build/
+sdkconfig
+sdkconfig.old
+
+# --- Python & Virtual Environments ---
+# If you use a local .venv for idf.py or linting
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- IDE Specifics ---
+# VS Code
+.vscode/
+# (Optional: keep .vscode/extensions.json or launch.json if shared)
+
+# CLion/JetBrains
+.idea/
+cmake-build-*/
+
+# --- Temporary/Log Files ---
+*.log
+ManagedComponents/
