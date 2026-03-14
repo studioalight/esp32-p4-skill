@@ -54,7 +54,7 @@ async def monitor_serial(duration=None, grep=None, reset=False, stream=False):
                         # Clean output
                         text = re.sub(r'[^\x20-\x7E\n\r]', '', text)
                         if text.strip():
-                            print(text, end='', flush=stream)
+                            print(text, flush=stream)
                             
                     elif data.get('type') == 'status':
                         status = data.get('connected', False)
