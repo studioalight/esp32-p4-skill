@@ -25,7 +25,7 @@ async def monitor_serial(duration=None, grep=None, reset=False):
         # Reset device if requested
         if reset:
             print("Resetting device...")
-            await ws.send(json.dumps({'reset': True}))
+            await ws.send(json.dumps({'action': 'reset'}))
             await asyncio.sleep(1)
             print("Device reset complete\n")
         
